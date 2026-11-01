@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<survey>
+<!-- Synthetic examples only -->
+<radio label="Q1"><title>Choose an option</title><row label="r1">Option A</row><row label="r2">Option B</row></radio>
+<checkbox label="Q2"><title>Select activities</title><row label="r1">Reading</row><row label="r2">Walking</row></checkbox>
+<number label="Q3" optional="1"><title>Enter a number</title></number>
+<radio label="HQ1" where="execute" optional="1"><title>Hidden example</title><row label="r1">Example</row></radio>
+</survey>

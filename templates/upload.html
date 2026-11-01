@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>VALIDATRIX</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+
+<style>
+  :root {
+    --primary-color: #007bff;
+    --primary-hover: #0056b3;
+    --light-bg: #f8f9fa;
+    --border-color: #dee2e6; /* Used for table borders now */
+    --text-color: #212529;
+    --text-muted: #6c757d;
+    --ok-bg: #e6ffed;
+    --ok-text: #006421;
+    --error-bg: #ffe5e5;
+    --error-text: #b20000;
+    --warn-bg: #fffbe6;
+    --warn-text: #996f00;
+  }
+  body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--light-bg);
+    margin: 0;
+    color: var(--text-color);
+  }
+  /* --- MODIFIED SECTION --- */
+  header {
+    /* Gradient is now much lighter (Tailwind sky-200 to cyan-100) */
+    background: linear-gradient(90deg, #bae6fd 0%, #cffafe 100%);
+    color: white;
+    padding: 2.5rem 1rem;
+    text-align: center;
+  }
+  /* --- END OF MODIFICATION --- */
+  
+  header h1 { margin: 0; font-size: 2.5rem; }
+  header p { 
+    margin: 0.25rem 0 0; 
+    font-size: 1.1rem; 
+    /* Changed text color to be visible on light background */
+    color: #0e7490; /* cyan-700 */
+    opacity: 0.9; 
+  }
+
+  .container {
+    max-width: 1100px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+  }
+
+  .upload-container {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: white;
+    border-radius: 12px;
+    padding: 1rem;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+  }
+  .upload-area {
+    flex-grow: 1;
+    border: 2px dashed var(--border-color);
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+  }
+  .upload-area.drag-over {
+    border-color: var(--primary-color);
+    background-color: #f0f8ff;
+  }
+  .upload-area p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+  }
+  .upload-area input[type="file"] { display: none; }
+
+  .run-btn {
+    background: var(--primary-color);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 1rem;
+    white-space: nowrap;
+    transition: background-color 0.3s ease;
+  }
+  .run-btn:hover { background: var(--primary-hover); }
+
+  .results-container {
+      background-color: #fff;
+      border-radius: 12px;
+      padding: 2rem;
+      margin-top: 2rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+  }
+  .controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+  }
+  .download-btn {
+    background: var(--primary-color);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 1rem;
+    transition: background-color 0.3s ease;
+  }
+  .download-btn:hover { background: var(--primary-hover); }
+
+  .toggle-row { display: flex; align-items: center; gap: 8px; }
+  .switch { position: relative; display: inline-block; width: 48px; height: 26px; }
+  .switch input { display: none; }
+  .slider { background-color: #ccc; position: absolute; cursor: pointer; border-radius: 26px; top: 0; left: 0; bottom: 0; right: 0; transition: 0.4s; }
+  .slider:before { content: ""; height: 20px; width: 20px; position: absolute; left: 4px; top: 3px; background-color: white; border-radius: 50%; transition: 0.4s; }
+  input:checked + .slider { background-color: var(--primary-color); }
+  input:checked + .slider:before { transform: translateX(22px); }
+
+  /* Cell coloring */
+  td.error-cell {
+    background-color: var(--error-bg) !important;
+    font-weight: bold;
+    color: var(--error-text);
+  }
+  td.warn-cell {
+    background-color: var(--warn-bg) !important;
+    color: var(--warn-text);
+  }
+  td.ok-cell {
+    background-color: var(--ok-bg) !important;
+    color: var(--ok-text);
+  }
+
+  /* Styles for table grid lines */
+  #results-table {
+    border-collapse: collapse; /* Ensures borders combine */
+    border: 1px solid var(--border-color); /* Add outer border */
+  }
+  #results-table th,
+  #results-table td {
+    border: 1px solid var(--border-color); /* Add borders to all cells */
+    padding: 8px 10px; /* Adjust padding as needed */
+  }
+  #results-table th {
+    background-color: #f1f5f9; /* Light gray background for header */
+    text-align: left;
+  }
+  /* Prevent wrapping in the first header cell ("S. No.") */
+  #results-table th:first-child {
+    white-space: nowrap;
+  }
+  /* Prevent wrapping in the second header cell ("Question Label") */
+  #results-table th:nth-child(2) {
+    white-space: nowrap;
+  }
+
+</style>
+</head>
+<body>
+
+<!-- --- MODIFIED SECTION --- -->
+<header>
+  <!-- The H1 tag is removed. The logo is centered by the header's text-align: center -->
+  <img 
+    src="{{ url_for('static', filename='logo.png') }}" 
+    alt="Validatrix Logo" 
+    class="h-12 w-auto inline-block" 
+    style="max-width: 200px;" 
+  >
+  <p>Validates Decipher Survey XML</p>
+</header>
+<!-- --- END OF MODIFICATION --- -->
+
+<div class="container">
+  <p>Try the demo: <a href="/sample">download sample XML</a>, then upload it below. Maximum file size: 5 MB. Use synthetic data.</p>
+  <form method="POST" enctype="multipart/form-data" id="upload-form">
+    <div class="upload-container">
+        <div class="upload-area" id="drop-zone">
+            <p id="upload-text">Drag & Drop or Click to Select File (.txt)</p>
+            <input type="file" name="file" id="file-input" accept=".xml,.txt"/>
+        </div>
+        <button type="submit" class="run-btn">Run Validatrix</button>
+    </div>
+  </form>
+  {% if error %}
+  <div class="alert error" style="margin-top: 1rem; text-align: center;"><strong>Error:</strong> {{ error }}</div>
+  {% endif %}
+
+  {% if results is defined and results %}
+  <div class="results-container">
+    <div class="controls">
+        <div class="toggle-row">
+            <label class="switch">
+                <input type="checkbox" id="toggle-filter-checkbox" />
+                <span class="slider"></span>
+            </label>
+            <span id="toggle-filter-label">Showing All Results</span>
+        </div>
+        <form method="POST" action="/download" id="download-form">
+            <!-- Now holds the full results list -->
+            <input type="hidden" name="data" value="{{ full_results_data }}" />
+            <!-- New hidden input for toggle state -->
+            <input type="hidden" name="filter_active" id="filter_active_input" value="false" />
+            <button type="submit" class="download-btn">Download Report</button>
+        </form>
+    </div>
+
+    <table id="results-table" class="display" style="width: 100%">
+      <thead>
+        <tr>
+          <th>S. No.</th>
+          <th>Question Label</th>
+          <th>Question Type</th>
+          <th>Observations</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in results %}
+        <tr>
+          <td></td>
+          <td>{{ row['Question Label'] }}</td>
+          <td>{{ row['Question Type'] }}</td>
+          <td class="{% if '❌' in row['Error Display'] %}error-cell{% elif '⚠' in row['Error Display'] %}warn-cell{% elif '✅' in row['Error Display'] %}ok-cell{% endif %}">
+            {{ row['Error Display'] }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+    const uploadText = document.getElementById('upload-text');
+
+    if (dropZone && fileInput && uploadText) {
+        dropZone.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) {
+                uploadText.textContent = 'File selected: ' + fileInput.files[0].name;
+            } else {
+                uploadText.textContent = 'Drag & Drop or Click to Select File (.xml, .txt)';
+            }
+        });
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault(); e.stopPropagation();
+            dropZone.classList.add('drag-over');
+        });
+        dropZone.addEventListener('dragleave', (e) => {
+            e.preventDefault(); e.stopPropagation();
+            dropZone.classList.remove('drag-over');
+        });
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault(); e.stopPropagation();
+            dropZone.classList.remove('drag-over');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                fileInput.dispatchEvent(new Event('change'));
+            }
+        });
+    }
+});
+
+$(document).ready(function() {
+    if ($("#results-table").length) {
+        var table = $("#results-table").DataTable({
+            "ordering": false,
+            pageLength: 25,
+            language: { search: "Filter:" },
+            columnDefs: [{ targets: 0, searchable: false, orderable: false }],
+        });
+
+        table.on("order.dt search.dt page.dt", function () {
+            const info = table.page.info();
+            table.cells(null, 0, { search: "applied", order: "applied" })
+                .every(function (cell) {
+                    const rowIndex = this.index().row;
+                    this.data(info.start + rowIndex + 1);
+                });
+        }).draw(); // Draw the table initially with all data
+
+        // Get the hidden input for toggle state
+        const filterActiveInput = $("#filter_active_input");
+
+        $("#toggle-filter-checkbox").on("change", function () {
+            const isChecked = $(this).is(":checked");
+
+            // Update the hidden input value based on toggle state
+            filterActiveInput.val(isChecked ? "true" : "false");
+
+            if (isChecked) {
+                // Apply the custom filter function only when checked
+                $.fn.dataTable.ext.search.push(
+                    function(settings, data, dataIndex) {
+                        const observations = data[3] || '';
+                        return observations.includes('❌') || observations.includes('⚠');
+                    }
+                );
+                $("#toggle-filter-label").text("Showing Only Issues");
+            } else {
+                // Clear the custom filter by removing the function
+                $.fn.dataTable.ext.search.pop();
+                $("#toggle-filter-label").text("Showing All Results");
+            }
+            table.draw(); // Redraw the table with the new filter state
+        });
+    }
+});
+</script>
+</body>
+</html>
